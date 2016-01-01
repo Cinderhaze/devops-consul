@@ -1,0 +1,20 @@
+devopsstc consul talk
+----------------------
+
+Started by getting Consul runnin in a few hand-created vagrant instances, bootstrapped using puppet.
+
+I tried to look for a more lightweight way of doing it... docker?
+
+Right now I'm working though
+http://jlordiales.me/2015/02/03/registrator/
+
+I'm trying to run docker from inside the VM, and I don't have a route to any registry..
+
+core@host-2 ~ $ docker run --rm progrium/consul cmd:run 172.28.128.3 -d -v /mnt:/data
+Unable to find image 'progrium/consul' locally
+Pulling repository progrium/consul
+2016/01/01 03:45:28 Could not reach any registry endpoint
+
+
+--- 
+Sam looked at it, and was seeing the same issue, it may be a problem with the coreos base image.  I'm going to try replacing the image with the base image used by boot2docker and see if it fixes it.  
