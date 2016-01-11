@@ -1,7 +1,7 @@
 devopsstc consul talk
 ----------------------
 
-Started by getting Consul runnin in a few hand-created vagrant instances, bootstrapped using puppet.
+Started by getting Consul running in a few hand-created vagrant instances, bootstrapped using puppet.
 
 I tried to look for a more lightweight way of doing it... docker?
 
@@ -18,3 +18,101 @@ Pulling repository progrium/consul
 
 --- 
 Sam looked at it, and was seeing the same issue, it may be a problem with the coreos base image.  I'm going to try replacing the image with the base image used by boot2docker and see if it fixes it.  
+
+
+I had the same issue manually loading the boot2docker image in.. giving up and following advise here now
+http://howtocookmicroservices.com/docker-compose/
+
+
+------
+Also looking at 
+https://www.livewyer.com/blog/2015/02/05/service-discovery-docker-containers-using-consul-and-registrator
+
+export PRIVATE_IP=$(ifconfig eth1 | grep inet | awk '{ print $2 }' | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])')
+
+export BRIDGE_IP=$(ifconfig docker0 | grep inet | awk '{ print $2 }' | grep -oE '((1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])\.){3}(1?[0-9][0-9]?|2[0-4][0-9]|25[0-5])')
+
+docker run -d --name consul -h $HOSTNAME \
+    -p $PRIVATE_IP:8300:8300 -p $PRIVATE_IP:8301:8301 -p $PRIVATE_IP:8301:8301/udp \
+    -p $PRIVATE_IP:8302:8302 -p $PRIVATE_IP:8302:8302/udp -p $PRIVATE_IP:8400:8400 \
+    -p $PRIVATE_IP:8500:8500 -p $BRIDGE_IP:53:53/udp \
+    progrium/consul -server -advertise $PRIVATE_IP -bootstrap-expect 3
+ 
+docker run -d --name registrator \
+    -v /var/run/docker.sock:/tmp/docker.sock \
+    -h $HOSTNAME gliderlabs/registrator consul://$PRIVATE_IP:8500
+
+
+#--------------
+So, I stood up a mysql container on dev-1
+If I run the command from dev-3 listed in the exale, I get. 
+root@e7fde4aa34d6:/# mysql -u root -h mysql.service.consul -p
+Enter password: 
+ERROR 2003 (HY000): Can't connect to MySQL server on 'mysql.service.consul' (111)
+root@e7fde4aa34d6:/# ping -c 3 mysql.service.consul
+PING mysql.service.consul (172.17.0.3) 56(84) bytes of data.
+64 bytes from 172.17.0.3: icmp_seq=1 ttl=64 time=0.052 ms
+64 bytes from 172.17.0.3: icmp_seq=2 ttl=64 time=0.075 ms
+64 bytes from 172.17.0.3: icmp_seq=3 ttl=64 time=0.075 ms
+
+--- mysql.service.consul ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 0.052/0.067/0.075/0.012 ms
+
+If I try it within itn container.. 
+docker@dev-1:~$ docker exec mysql mysql -u root -h 127.0.0.1 -p=consul-test
+ERROR 1045 (28000): Access denied for user 'root'@'127.0.0.1' (using password: YES)
+
+
+root@e7fde4aa34d6:/# dig nginx-80.service.consul
+
+; <<>> DiG 9.9.5-3ubuntu0.6-Ubuntu <<>> nginx-80.service.consul
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 39571
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;nginx-80.service.consul.	IN	A
+
+;; ANSWER SECTION:
+nginx-80.service.consul. 0	IN	A	172.17.0.3
+
+;; Query time: 10 msec
+;; SERVER: 172.17.0.1#53(172.17.0.1)
+;; WHEN: Sun Jan 10 05:16:45 UTC 2016
+;; MSG SIZE  rcvd: 80
+
+root@e7fde4aa34d6:/# dig mysql.service.consul
+
+; <<>> DiG 9.9.5-3ubuntu0.6-Ubuntu <<>> mysql.service.consul
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57233
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;mysql.service.consul.		IN	A
+
+;; ANSWER SECTION:
+mysql.service.consul.	0	IN	A	172.17.0.3
+
+;; Query time: 9 msec
+;; SERVER: 172.17.0.1#53(172.17.0.1)
+;; WHEN: Sun Jan 10 05:17:02 UTC 2016
+;; MSG SIZE  rcvd: 74
+
+
+
+
+-----------------------------
+
+5bf0aea4b3e1: Error pulling image (5.5) from docker.io/library/mysql, mkdir /mnt/sda1/var/lib/docker/graph/_tmp/4fb3123ec22dfb40bccff234ad35a97cae091cedf48c9e03724f105dd1cb0672: read-only file systeError pulling image (5.5) from docker.io/library/mysql, mkdir /mnt/sda1/var/lib/docker/graph/_tmp/4fb3123ec22dfb40bccff234ad35a97cae091cedf48c9e03724f105dd1cb0672: read-only file system
+MacBook-Pro-2:devops-consul dawiest$ docker -H $TCP_1 run -d --dns=$BRIDGE_IP --name mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD=consul-test mysql:5.5
+Error response from daemon: open /mnt/sda1/var/lib/docker/repositories-aufs: no such file or directory
+
+
+
+
+-----------
+
