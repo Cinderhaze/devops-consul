@@ -95,9 +95,9 @@ class consul_check::puppet {
     script   => '/vagrant/scripts/check_puppet.rb -f -c 1 -w 1',
   }
 
-  ::consul::check { 'check_puppet_time':
-    interval => '30s',
-    script   => '/vagrant/scripts/check_puppet.rb -c 360 -w 360',
-  }
+#  ::consul::check { 'check_puppet_time':
+#    interval => '30s',
+#    script   => '/vagrant/scripts/check_puppet.rb -c 360 -w 360',
+#  }
 }
 
