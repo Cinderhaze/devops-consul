@@ -8,7 +8,7 @@ nodes = [
   {:hostname => 'host-1', :ip => '172.16.32.10', :box => puppet_box, :fwdhost => 8500, :fwdguest => 8500, :ram => 512},
   {:hostname => 'host-2', :ip => '172.16.32.11', :box => puppet_box },
   {:hostname => 'host-3', :ip => '172.16.32.12', :box => puppet_box },
-  {:hostname => 'host-4', :ip => '172.16.32.13', :box => puppet_box },
+#  {:hostname => 'host-4', :ip => '172.16.32.13', :box => puppet_box },
 ]
 
 Vagrant.configure("2") do |config|

@@ -22,8 +22,10 @@ node 'host-1' {
   }
   ::consul::service { 'web_ui':
     checks => [{
-        script   => 'curl -I 127.0.0.1:8500/ui/',
+        name     => 'HTTP API on port 8500 for Consul UI',
+        http     => 'http://127.0.0.1:8500/ui/',
         interval => '10s'
+        timeout  => '1s'
       }
       ],
     port   => 8500,
@@ -47,6 +49,14 @@ node 'host-2' {
       'server'           => true,
       'retry_join'       => ['172.16.32.10', '172.16.32.12'],
     }
+  }
+
+  class { 'nginx': }
+  nginx::resource::vhost { 'example':
+    ensure => present,
+    server_name => $hostname,
+    listen_port => 8140,
+    www_root = '/vagrant/www/',
   }
 }
 
