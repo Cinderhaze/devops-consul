@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>State College DevOps</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+
+# Welcome to DevOps State College
+
+---
+
+# Why DevOps State College?
+* Build a community and make connections
+* Exchange ideas
+* Learn
+* Promote DevOps culture
+* Fun
+* Not tied to one vendor/technology
+
+---
+
+# What is DevOps?
+Grand unification of philosophy around how to manage Development (programmers,
+application analysts, application owners, project managers) and IT Operations
+(system admins, network admins, security, data center, storage, database admin)
+in a tightly-integrated way.
+
+DevOps is the belief that working together as a collaborative team will produce
+better results, and break down barriers and finger pointing.
+
+---
+
+# Devops basic principles
+* Culture
+* Lean
+* Automation
+* Measurement
+* Sharing
+
+---
+
+# Common DevOps Strategies - Cultural
+* Find individuals that have both Dev and Ops skills and make liaisons
+* All Production environments mirrored by identical Development environments
+* Dev and Ops staff all have scheduled "office hours"
+* Focus on automated testing of all infrastructure and software components.
+* No app lauches without automated testing in place at both the infrastructure and app level.
+* Automated monitoring or platform monitors infrastruture and software layers 7x24, and pages Dev and Ops 7x24.
+* Both Dev and Ops have 7x24 accountablity for the performance and availability of the environment.
+* Regular code reviews are required, and Ops is involved with code reviews
+* Regular infrastructure architecture/config/outtage reviews are required, and Dev is involved with infrastructure reviews.
+* Shared sign-off by Dev and Ops before any application goes live
+* Infrastructure Automation
+
+---
+
+# Common DevOps Strategies - Technical
+* Standardized Runbooks
+* Fully Automated Deployments
+* Continuous Deployment
+* Advanced Test Driven Development
+* Minimal Marketable Features
+* Ship When Done
+* Runbook Automation
+* Perpetual Beta
+* Automated Recovery
+* Metrics
+* Process Tooling
+
+---
+
+# Future Presentations
+
+---
+
+# How to Get There...
+* DevOps is a journey
+* Dev and Ops need to look introspectively to understand their strengths
+and challenges, and look for ways to contribute towards breaking down silos
+* Dev sharpen skills on ops/admin, Ops sharpen skills on coding
+* Revisit legacy architecture
+* Set small goals to be awesome
+* Don't automate what you don't understand
+* CLAMS: First, be lean.
+
+---
+
+# Job Opportunities
+* AppliedTrust
+  * AppliedTrust is hiring in Philadelphia, Dallas and Boulder offices.
+  * For more information, see https://www.appliedtrust.com/jobs/ or talk to me afterwards
+* PSU Outreach
+  *  Hiring linux sys admins to join a committed Ops team of admins/DevOps engineers who work closely with tool-diverse development teams across Outreach and Online Education.
+
+---
+
+# Intro to Consul
+* What is consul?
+  * Service Discovery
+  * Monitoring/Health Check
+  * Key/Value store
+
+---
+
+# Service Discovery
+* Clients provide a service
+  * api
+  * mysql
+  * nginx
+  * etc...
+* Other clients can Discover that service
+  * DNS
+  * HTTP
+
+---
+
+# How does it work?
+## To maintain consistency - Servers
+* RAFT consensus protocol
+* Leader Election
+* 3 to 5 servers
+  * Consensus gets progressivly slow as more machines are added
+  * Keeps a balance between availability and performance
+* Servers in different data centers talk across WAN
+* Leaders have extra responsibilites
+  * Processes all queries
+  * Processes all transactions
+  * Non-leader RPC requests are forwarded to the Leader
+
+---
+
+# How does it work?
+## To share information - Clients
+* Gossip protocol
+  * Gossip pool contains all nodes in datacenter
+  * No need to configure clients with address of servers
+  * Automatic discovery
+* Node failure detection is distributed
+  * More scalable than niave heartbeat schemes
+* Messaging layer for events
+  * When Leader elections occur
+  * When custom events are passed
+
+---
+
+# Consul agent lifecycle
+
+* Started
+  * Does not know about the rest of the cluster
+* Join
+  * Via join command or pre-configured for auto-join start
+  * Node join - gossip information, eventually known by whole cluster
+  * Server join - existing servers replicate to new node
+* Failed
+  * Unreachable nodes or agent crashes are treated as Failed
+  * Failed status is updated in the service catalog
+  * Health check will be updated to reflect Failed status
+* Leave
+  * If a node leaves, it is immediatly deregestered.
+  * In contrast, a failed node hangs around until coming back or being reaped
+* Reaping
+  * Failed or Left nodes will removed from catalog
+  * Non-configurable 72-hour interval
+  * All services from reaped nodes will be deregistered
+
+---
+
+# Consul agent DNS Interface
+
+* DNS Interface allows applications to use consul without large application changes
+* Node lookup
+  * <node>.node[.datacenter].<domain>
+* Service lookup
+  * [tag.]<service>.service[.datacenter].<domain>
+  * service-name.service.consul
+
+* DNS Query
+  * Uses health-check info to remove unhealthy nodes from results
+  * Simple load balancing - set of nodes is randomized each request
+  * Easy to use for application level retries for auto-healing service oriented foundation
+  * Serves both A and SRV records
+
+---
+
+# Consul agent DNS Interface
+
+### query/interact with dns entries using dig
+
+
+```terminal
+$ dig @127.0.0.1 -p 8600 foo.node.consul ANY
+
+; <<>> DiG 9.8.3-P1 <<>> @127.0.0.1 -p 8600 foo.node.consul ANY
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 24355
+;; flags: qr aa rd; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 0
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;foo.node.consul.       IN  ANY
+
+;; ANSWER SECTION:
+foo.node.consul.    0   IN  A   10.1.10.12
+
+;; AUTHORITY SECTION:
+consul.         0   IN  SOA ns.consul. postmaster.consul. 1392836399 3600 600 86400 0
+```
+
+---
+
+# Consul agent DNS Interface
+
+### query/interact with dns entries using dig
+
+```terminal
+$ dig @127.0.0.1 -p 8600 consul.service.consul SRV
+
+; <<>> DiG 9.8.3-P1 <<>> @127.0.0.1 -p 8600 consul.service.consul ANY
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 50483
+;; flags: qr aa rd; QUERY: 1, ANSWER: 3, AUTHORITY: 1, ADDITIONAL: 1
+;; WARNING: recursion requested but not available
+
+;; QUESTION SECTION:
+;consul.service.consul.     IN  SRV
+
+;; ANSWER SECTION:
+consul.service.consul.  0   IN  SRV 1 1 8300 foobar.node.dc1.consul.
+
+;; ADDITIONAL SECTION:
+foobar.node.dc1.consul. 0   IN  A   10.1.10.12
+```
+
+---
+# HTTP Interface
+
+### RESTful HTTP API
+* CRUD operations 
+  * Nodes
+  * Services
+  * Checks
+  * Configuration
+* Versioned endpoints for backward compatibility
+* Each endpoint manages a different aspect of Consul:
+  * acl - Access Control Lists
+  * agent - Consul Agent
+  * catalog - Nodes and services
+  * coordinate - Network coordinates
+  * event - User Events
+  * health - Health checks
+  * kv - Key/Value store
+  * query - Prepared Queries
+  * session - Sessions
+  * status - Consul system status
+
+---
+
+# Consul Configuration
+### Command-line Options
+* -bootstrap 
+  * Legacy flag used for self-electing as leader for initial configuration
+* -bootstrap-expect 
+  * Used for setting the number of consul servers in the datacenter.  Consul will wait until the expected number of servers are clustered, then leader election will occur.
+* -config-dir
+  * Consul loads all files matching *.json from the given directory
+* -data-dir
+  * Directory required for all agents to store state
+* -join
+  * Address of another agent to join on startup
+* -retry-join
+  * Like 'join' but will keep retrying, used when you know the nodes will eventually be up
+
+---
+
+# Consul Configuration
+### Config files
+Example config file
+```json
+{
+  "datacenter": "east-aws",
+  "data_dir": "/opt/consul",
+  "log_level": "INFO",
+  "node_name": "foobar",
+  "server": true,
+  "watches": [
+    {
+        "type": "checks",
+        "handler": "/usr/bin/health-check-handler.sh"
+    }
+  ]
+}
+```
+
+---
+
+# Consul Configuration
+### Config files
+Example Service definition
+```json
+{
+  "service": {
+    "name": "redis",
+    "tags": ["master"],
+    "address": "127.0.0.1",
+    "port": 8000,
+    "enableTagOverride": false,
+    "checks": [
+      {
+        "script": "/usr/local/bin/check_redis.py",
+        "interval": "10s"
+      }
+    ]
+  }
+}
+```
+
+---
+
+# Consul commands
+
+```terminal
+$ consul
+usage: consul [--version] [--help] <command> [<args>]
+
+Available commands are:
+    agent          Runs a Consul agent
+    event          Fire a new event
+    exec           Executes a command on Consul nodes
+    force-leave    Forces a member of the cluster to enter the "left" state
+    info           Provides debugging information for operators
+    join           Tell Consul agent to join cluster
+    keygen         Generates a new encryption key
+    keyring        Manages gossip layer encryption keys
+    leave          Gracefully leaves the Consul cluster and shuts down
+    lock           Execute a command holding a lock
+    members        Lists the members of a Consul cluster
+    monitor        Stream logs from a Consul agent
+    reload         Triggers the agent to reload configuration files
+    rtt            Estimates network round trip time between nodes
+    version        Prints the Consul version
+    watch          Watch for changes in Consul
+```
+
+---
+
+# Health Checks
+
+* Associations
+  * Application level health check - associated with a service
+  * Entire node - not associated with a service
+
+---
+
+# Health Checks
+### Five kinds of checks
+* Script + Interval
+  * External application
+  * Appropriate exit code
+  * Similar to Nagios
+
+
+```json
+{
+  "check": {
+    "id": "mem-util",
+    "name": "Memory utilization",
+    "script": "/usr/local/bin/check_mem.py",
+    "interval": "10s"
+  }
+}
+```
+
+---
+
+# Health Checks
+
+### Five kinds of checks
+* Script + Interval
+* HTTP + Interval
+  * HTTP GET request every interval
+  * 2xx - passing
+  * 429 Too Many Requests - warning
+  * Anything else - failure
+  * Preferred over a script that checks status with curl
+
+```json
+{
+  "check": {
+    "id": "api",
+    "name": "HTTP API on port 5000",
+    "http": "http://localhost:5000/health",
+    "interval": "10s",
+    "timeout": "1s"
+  }
+}
+```
+
+---
+
+# Health Checks
+
+### Five kinds of checks
+* Script + Interval
+* HTTP + Interval
+* TCP + Interval
+  * TCP connection attempt every interval to specified Hostname/IP and port
+  * Accepted connection - Success
+  * Not accepted - Critical
+  * Preferred over a script using netcat to check a simple socket connection
+
+```json
+{
+  "check": {
+    "id": "ssh",
+    "name": "SSH TCP on port 22",
+    "tcp": "localhost:22",
+    "interval": "10s",
+    "timeout": "1s"
+  }
+}
+```
+
+---
+
+# Health Checks
+
+### Five kinds of checks
+* Script + Interval
+* HTTP + Interval
+* TCP + Interval
+* Time to Live (ttl)
+  * Service self registers status with a PUT
+  * Dead Man's switch
+
+```json
+{
+  "check": {
+    "id": "web-app",
+    "name": "Web App Status",
+    "notes": "Web app does a curl internally every 10 seconds",
+    "ttl": "30s"
+  }
+}
+```
+
+---
+
+# Health Checks
+
+### Five kinds of checks
+* Script + Interval
+* HTTP + Interval
+* TCP + Interval
+* Time to Live (ttl)
+* Docker + Interval
+  * invoke external application packaged in Docker container
+  * Triggered with the Docker Exec API
+  * Similar to Script Health check above
+
+```json
+{
+"check": {
+    "id": "mem-util",
+    "name": "Memory utilization",
+    "docker_container_id": "f972c95ebf0e",
+    "shell": "/bin/bash",
+    "script": "/usr/local/bin/check_mem.py",
+    "interval": "10s"
+  }
+}
+```
+
+---
+
+# Watches
+
+Watches specify a view of data (list of nodes, K/V Pairs, Health Checks) which are monitored for updates.  Upon update, an external handler is detected. 
+
+E.G. Watch status of health checks and notify an external system when a check is critical
+
+---
+
+# Demo!
+    </textarea>
+    <script src="https://gnab.github.io/remark/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
